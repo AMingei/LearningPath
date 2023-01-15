@@ -26,8 +26,17 @@
 > 
 > [5.TS 新增类型](#ts-新增类型)
 > > [5.1.字面量类型](#字面量类型)  
-[5.2.枚举](#枚举)  
-[5.3.元组](#元组)
+[5.3.元组](#元组)  
+[5.2.枚举](#枚举) [手动赋值](#手动赋值)
+
+参考：
+
+> [TypeScript 入门教程 - xcatliu](http://ts.xcatliu.com/)  
+[ES6 入门教程 - ECMAScript 6入门 - 阮一峰](https://es6.ruanyifeng.com/)  
+[TypeScript 中文网](https://www.tslang.cn/docs/handbook/basic-types.html)  
+[TypeScript中的never类型具体有什么用？ - 知乎 - 尤雨溪](https://www.zhihu.com/question/354601204)  
+[《TS中any、unknown、never 的区别是什么？》 - 知乎](https://zhuanlan.zhihu.com/p/482033186)  
+[TypeScript 笔记（二） 字面量类型 - 知乎](https://zhuanlan.zhihu.com/p/60231515)
 
 <br />
 
@@ -788,17 +797,97 @@ printPoint(new IPoint(1, 2));
 
 ### 字面量类型
 
-字面量即常量，通过 `const` 声明。
+字面量（Literal Type）即常量，通过 `const` 声明。
 
-**注意** 在 JavaScript 中的常量和一般语言中的常量含义不同。JavaScript 中的常量的含义是：“只能在初始化时候赋值一次，从此都不可以再次赋值的变量”，举个最简单的例子：
+**注意** 在 JavaScript 中的常量和一般语言中的常量含义不同。JavaScript 中的常量的含义是：**只能在初始化时候赋值一次，从此都不可以再次赋值的变量**。例如：
 
 ```ts
 // Date 对象并不是编译期可以确定的量，但声明后，不能修改，只能读取
 const a = new Date()
 ```
 
-### 枚举
+TypeScript 中字面量主要分为布尔字面量类型、数字字面量类型、枚举字面量类型、大整数字面量类型和字符串字面量类型。字面量的类型格式：
 
+```ts
+const a: 2 = 2
+const b: 0b10 = 2
+const c: number = 2
+const d: unknown = 2
 
+const e: 'electron' = 'electron'
+const f: string = 'fastjson'
+```
+
+实际应用中，**字符串字面量类型** 和 **联合类型** 能够很好的搭配，更简洁地实现枚举功能：
+
+```ts
+type EventNames = 'click' | 'scroll' | 'mousemove';
+function handleEvent(ele: Element, event: EventNames) {
+    // do something
+}
+
+handleEvent(document.getElementById('hello'), 'scroll');
+```
 
 ### 元组
+
+
+
+### 枚举
+
+枚举（Enum）类型用于取值被限定在一定范围内的场景，使用 `enum` 关键字来定义：
+
+```ts
+enum Days {Sun, Mon, Tue, Wed, Thu, Fri, Sat};
+
+//枚举成员会被赋值为从 0 开始递增的数字，同时也会对枚举值到枚举名进行反向映射
+console.log(Days["Sun"] === 0); // true
+console.log(Days[0] === "Sun"); // true
+```
+
+枚举类型实际上将被编译为：
+
+```ts
+var Days;
+(function (Days) {
+	Days[Days["Sun"] = 0] = "Sun";
+	Days[Days["Mon"] = 1] = "Mon";
+		...
+	Days[Days["Sat"] = 6] = "Sat";
+})(Days || (Days = {}));
+```
+
+#### 手动赋值
+
+我们也可以给枚举项手动赋值，未手动赋值的枚举项会接着上一个枚举项递增。  
+如果未手动赋值的枚举项与手动赋值的重复，后者将会覆盖前者：
+
+```ts
+enum Days {Sun = 3, Mon, Tue, Wed, Thu, Fri, Sat};
+
+console.log(Days["Sun"] === 3); // true
+console.log(Days["Mon"] === 1); // true
+console.log(Days["Tue"] === 2); // true
+console.log(Days["Wed"] === 3); // true
+console.log(Days[3] === "Sun"); // false
+console.log(Days[3] === "Wed"); // true
+```
+
+枚举项也可以为小数或负数，此时后续未手动赋值的项的递增步长仍为 1：
+
+```ts
+enum Days {Sun = 0.5, Mon, Tue, Wed, Thu, Fri, Sat};
+
+console.log(Days["Sun"] === 0.5); // true
+console.log(Days["Sat"] === 6.5); // true
+```
+
+通过类型断言，tsc 将无视类型检查，编译出的 js 仍然是可用的：
+
+```ts
+enum Days {Sun = 7, Mon, Tue, Wed, Thu, Fri, Sat = <any>'S'};
+
+console.log(Days[<any>'S']); // Sat
+console.log(Days['Sat']); // S
+```
+
