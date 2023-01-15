@@ -20,14 +20,14 @@
 > 
 > [4.对象的类型](#对象的类型)
 > > [4.1.类的拓展](#类的拓展) [访问修饰符](#访问修饰符) [只读属性](#只读属性) [参数属性](#参数属性) [类的抽象](#类的抽象)  
-[4.2.接口](#接口) [只读属性](#e58faae8afbbe5b19ee680a7-1) [可选属性](#可选属性) [任意属性](#任意属性)  
+[4.2.接口](#接口) [只读属性](#只读属性-1) [可选属性](#可选属性) [任意属性](#任意属性)  
 [4.3.实现](#实现)  
 [4.4.继承](#继承) [接口继承类](#接口继承类)
 > 
 > [5.TS 新增类型](#ts-新增类型)
 > > [5.1.字面量类型](#字面量类型)  
-[5.3.元组](#元组)  
-[5.2.枚举](#枚举) [手动赋值](#手动赋值)
+[5.2.元组](#元组)  
+[5.3.枚举](#枚举) [数字赋值](#数字赋值) [非数字赋值](#非数字赋值) [常数枚举](#常数枚举) [外部枚举](#外部枚举)
 
 参考：
 
@@ -171,7 +171,7 @@ const someString: string = value as string;
 
 #### 底层类型
 
-关键字 `never` 表示些永不存在的值的类型，没有类型是 `never` 的子类型或可以赋值给 `never` 类型，返回never的函数必须存在无法达到的终点：
+关键字 `never` 表示些永不存在的值的类型，没有类型是 `never` 的子类型或可以赋值给 `never` 类型，返回 `never` 的函数必须存在无法达到的终点：
 
 ```ts
 function infiniteLoop(): never {
@@ -182,9 +182,8 @@ function error(message: string): never {
 	throw new Error(message);
 }
 
-
 function fail(): never {
-    return error('Something failed');
+	return error('Something failed');
 }
 ```
 
@@ -353,7 +352,7 @@ tom.run();
 - 任何类型变量可被断言为 any 类型
 -  any 类型变量可以被断言为任意类型
 
-可知，通过双重断言 `Value as any as Type` 可以在任何变量类型间互相断言  
+可知，通过双重断言 `Value as any as Type` 可以在任何变量类型间互相断言。  
 **当你使用这种了断言方式**，**很可能是因为代码逻辑出现了错误**。
 
 ### 类型别名
@@ -471,8 +470,7 @@ mySearch = function(source: string, subString: string) {
 }
 ```
 
-**注意** 不要混淆了 TypeScript 中的 `=>` 和 ES6 中的 `=>`。
-
+**注意** 不要混淆了 TypeScript 中的 `=>` 和 ES6 中的 `=>`。  
 在 TypeScript 的类型定义中，`=>` 用来表示函数的定义，左边是输入类型，需要用括号括起来，右边是输出类型。
 
 采用函数表达式 | 接口定义函数的方式时，对等号左侧进行类型限制，可以保证以后对函数名赋值时保证参数个数、参数类型、返回值类型不变。
@@ -534,9 +532,8 @@ function reverse(x: number | string): number | string | void {
 
 <hr />
 
-ES6 提供了更接近传统语言的写法，引入了 **类**（Class）这个概念，作为对象的模板。通过 `class` 关键字，可以定义类。
-
-基本上，ES6 的类可以看作只是一个语法糖，它的绝大部分功能，ES5 都可以做到，新的class写法只是让对象原型的写法更加清晰、更像面向对象编程的语法而已。
+ES6 提供了更接近传统语言的写法，引入了 **类**（Class）这个概念，作为对象的模板。通过 `class` 关键字，可以定义类。  
+基本上，ES6 的类可以看作只是一个语法糖，它的绝大部分功能，ES5 都可以做到，新的 class 写法只是让对象原型的写法更加清晰、更像面向对象编程的语法而已。
 
 ### 类的拓展
 
@@ -599,7 +596,7 @@ class Animal {
 ```ts
 class Animal {
 	// public name: string;
-	public constructor(public name) {
+	public constructor(public name: string) {
 		// this.name = name;
 	}
 }
@@ -818,7 +815,7 @@ const e: 'electron' = 'electron'
 const f: string = 'fastjson'
 ```
 
-实际应用中，**字符串字面量类型** 和 **联合类型** 能够很好的搭配，更简洁地实现枚举功能：
+实际应用中，**字符串字面量类型** 和 **联合类型** 能够很好的搭配，更便捷地实现枚举功能：
 
 ```ts
 type EventNames = 'click' | 'scroll' | 'mousemove';
@@ -831,11 +828,27 @@ handleEvent(document.getElementById('hello'), 'scroll');
 
 ### 元组
 
+数组合并了相同类型的对象，而 **元组**（Tuple）合并了不同类型的对象。  
+而在编译时，元组将被编译为 JavaScript 数组，因此元组拥有和数组相似的特征。
 
+元组允许直接赋值，或者对其中某项赋值：
+
+```ts
+let tom: [string, number];
+tom[0] = 'Tom';
+tom = ['Tom', 25];
+```
+
+当添加越界的元素时，新元素的类型会被限制为元组中每个类型的联合类型：
+
+> ```ts
+> let tom: [string, number] = ['Tom', 25];
+> /* F */ tom.push(true);
+> ```
 
 ### 枚举
 
-枚举（Enum）类型用于取值被限定在一定范围内的场景，使用 `enum` 关键字来定义：
+**枚举**（Enum）类型用于取值被限定在一定范围内的场景，使用 `enum` 关键字来定义：
 
 ```ts
 enum Days {Sun, Mon, Tue, Wed, Thu, Fri, Sat};
@@ -857,37 +870,87 @@ var Days;
 })(Days || (Days = {}));
 ```
 
-#### 手动赋值
+#### 数字赋值
 
-我们也可以给枚举项手动赋值，未手动赋值的枚举项会接着上一个枚举项递增。  
-如果未手动赋值的枚举项与手动赋值的重复，后者将会覆盖前者：
-
-```ts
-enum Days {Sun = 3, Mon, Tue, Wed, Thu, Fri, Sat};
-
-console.log(Days["Sun"] === 3); // true
-console.log(Days["Mon"] === 1); // true
-console.log(Days["Tue"] === 2); // true
-console.log(Days["Wed"] === 3); // true
-console.log(Days[3] === "Sun"); // false
-console.log(Days[3] === "Wed"); // true
-```
-
-枚举项也可以为小数或负数，此时后续未手动赋值的项的递增步长仍为 1：
+我们也可以用 `number` 类型常量为枚举项手动赋值，未手动赋值的枚举项会接着上一个枚举项以 1 为步长递增。  
+如果未手动赋值的枚举项与手动赋值项，后者将会覆盖前者：
 
 ```ts
-enum Days {Sun = 0.5, Mon, Tue, Wed, Thu, Fri, Sat};
+enum Days {Sun = 3, Mon = 1, Tue, Wed, Thu, Fri = 6.5, Sat};
 
-console.log(Days["Sun"] === 0.5); // true
-console.log(Days["Sat"] === 6.5); // true
+console.log(Days['Sun'], Days['Mon'], Days['Tue'], Days['Wed'], Days['Thu']); // 3 1 2 3 4
+console.log(Days[3]); // Wed
+console.log(Days['Fri'], Days['Sat']); // 6.5 7.5
 ```
+
+枚举项有两种类型：**常数项**（constant member）和 **计算项**（computed member）。  
+以上的例子是手动赋值常数项，而赋值计算项后则不能再出现未赋值项：
+
+```ts
+enum Days {Sun, Mon, Tue, Wed, Thu, Fri = 'Friday'.length, Sat = 7};
+
+console.log(Days['Fri'], Days['Sat']); // 6 7
+```
+
+对于常数项与计算项的定义  
+当满足以下条件时，枚举成员被当作是常数：
+- 不具有初始化函数 & 前项是常数。（首个枚举元素的初始值默认为 0）
+- 枚举成员使用常数枚举表达式初始化。常数枚举表达式是 TypeScript 表达式的子集，它可以在编译阶段求值。当一个表达式满足下面条件之一时，它就是一个常数枚举表达式：
+	- 数字字面量  
+	`enmu Color { R, G, B = 3 }`
+	- 引用之前定义的常数枚举成员。如果这个成员是在同一个枚举类型中定义的，可以使用非限定名来引用  
+	`enmu Color { R, G, B = R }`  
+	`enmu Print { C, M, Y = Color.R }`
+	- 带括号的常数枚举表达式  
+	`enmu Color { R, G, B = (3) }`
+	- `+`, `-`, `~`, `++`, `--` 一元运算符应用于常数枚举表达式
+	- `+`, `-`, `*`, `/`, `%`, `<<`, `>>`, `>>>`, `&`, `|`, `^` 二元运算符，常数枚举表达式做为其一个操作对象。若常数枚举表达式求值后为 `NaN` 或 `Infinity`，则会在编译阶段报错
+
+所有其它情况的枚举成员被当作是需要计算得出的值。
+
+#### 非数字赋值
 
 通过类型断言，tsc 将无视类型检查，编译出的 js 仍然是可用的：
 
 ```ts
-enum Days {Sun = 7, Mon, Tue, Wed, Thu, Fri, Sat = <any>'S'};
+enum Days {Sun, Mon, Tue, Wed, Thu, Fri = <any>false, Sat = <any>'S'};
 
-console.log(Days[<any>'S']); // Sat
-console.log(Days['Sat']); // S
+console.log(Days[<any>false], Days['Fri']); // Fri false
+console.log(Days[<any>'S'], Days['Sat']); // Sat S
 ```
 
+同样的，非 number 类型的的赋值后不应再出现未负值项。
+
+#### 常数枚举
+
+常数枚举是使用 `const enum` 组合定义的枚举类型，其中不能包含计算型赋值：
+
+```ts
+const enum Directions { Up, Down, Left, Right = 4 }
+
+let directions = [ Directions.Up, Directions.Down, Directions.Left, Directions.Right ];
+```
+
+常数枚举将被在编译阶段被优化（删除）：
+
+```ts
+var directions = [0 /* Directions.Up */, 1 /* Directions.Down */, 2 /* Directions.Left */, 4 /* Directions.Right */];
+```
+
+#### 外部枚举
+
+外部枚举（Ambient Enums）是使用 `declare enum` 定义的枚举类型：
+
+```ts
+declare enum Directions { Up, Down, Left, Right = 4 }
+
+let directions = [ Directions.Up, Directions.Down, Directions.Left, Directions.Right ];
+```
+
+`declare` 定义的类型只会用于编译时的检查，编译结果中会被删除：
+
+```ts
+let directions = [ Directions.Up, Directions.Down, Directions.Left, Directions.Right ];
+```
+
+组合使用 `declare const enum` 时，编译结果和常数枚举相同。
