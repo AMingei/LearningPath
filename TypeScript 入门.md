@@ -28,6 +28,29 @@
 > > [5.1.字面量类型](#字面量类型)  
 [5.2.元组](#元组)  
 [5.3.枚举](#枚举) [数字赋值](#数字赋值) [非数字赋值](#非数字赋值) [常数枚举](#常数枚举) [外部枚举](#外部枚举)
+> 
+> [6.泛型](#泛型)
+> > [6.1.泛型的应用](#泛型的应用) [泛型函数](#泛型函数) [泛型接口](#泛型接口) [泛型类](#泛型类)  
+[6.2.泛型约束](#泛型约束)  
+[6.3.默认参数](#默认参数)
+> 
+> [7.声明合并](#声明合并)
+> > [7.1.合并的应用](#合并的应用) [函数的合并](#函数的合并) [类与接口的合并](#类与接口的合并)
+> 
+> [8.内置对象](#内置对象)
+> > [8.1.ECMAScript 内置对象](#ecmascript-内置对象)  
+[8.2.DOM 内置对象](#dom-内置对象)  
+[8.3.TypeScript 核心库的定义文件](#typescript-核心库的定义文件)
+> 
+> [.声明文件](#声明文件)
+> > [.1.全局变量](#全局变量) [声明类型](#声明类型) [声明命名空间](#声明命名空间) [Interface 与 Type](#interface-与-type) [命名冲突](#命名冲突)  
+[.2.直接扩展全局变量](#直接扩展全局变量)  
+[.3.npm 包](#npm-包)  
+[.4.UMD 库](#umd-库)  
+[.5.npm 包 | UMD 库中扩展全局变量](#npm-包--umd-库中扩展全局变量)  
+[.6.模块插件](#模块插件)  
+[.7.声明文件依赖](#声明文件依赖)  
+[.8.自动声明文件](#自动声明文件)
 
 参考：
 
@@ -36,7 +59,11 @@
 [TypeScript 中文网](https://www.tslang.cn/docs/handbook/basic-types.html)  
 [TypeScript中的never类型具体有什么用？ - 知乎 - 尤雨溪](https://www.zhihu.com/question/354601204)  
 [《TS中any、unknown、never 的区别是什么？》 - 知乎](https://zhuanlan.zhihu.com/p/482033186)  
-[TypeScript 笔记（二） 字面量类型 - 知乎](https://zhuanlan.zhihu.com/p/60231515)
+[TypeScript 笔记（二） 字面量类型 - 知乎](https://zhuanlan.zhihu.com/p/60231515)  
+[JavaScript 标准内置对象 - JavaScript | MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects)  
+[ES5/标准 ECMAScript 内置对象 - HTML5 Chinese  Interest Group Wiki](https://www.w3.org/html/ig/zh/wiki/ES5/%E6%A0%87%E5%87%86_ECMAScript_%E5%86%85%E7%BD%AE%E5%AF%B9%E8%B1%A1)  
+[文档对象模型 (DOM) - Web API 接口参考 | MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/Document_Object_Model)  
+
 
 <br />
 
@@ -954,3 +981,486 @@ let directions = [ Directions.Up, Directions.Down, Directions.Left, Directions.R
 ```
 
 组合使用 `declare const enum` 时，编译结果和常数枚举相同。
+
+<br />
+
+## 泛型
+
+<hr />
+
+**泛型**（Generics）是指在定义函数、接口或类的时候，不预先指定具体的类型，而在使用的时候再指定类型的一种特性。
+
+### 泛型的应用
+
+#### 泛型函数
+
+实现函数 `createArray` 的过程中，我们使用了 [数组泛型](#泛型表示) 来定义返回值的类型。`Array<any>` 允许数组的每一项都为任意类型：
+
+```ts
+function createArray(length: number, value: any): Array<any> {
+	let result = [];
+	for (let i = 0; i < length; i++) {
+		result[i] = value;
+	}
+	return result;
+}
+
+createArray(3, 'x'); // ['x', 'x', 'x']
+```
+
+但是我们预期的是，数组中每一项都应是参数 `value` 的类型。  
+我们可以通过在函数名后添加 `<T>`，以 `T` 用来指代任意输入的类型：
+
+```ts
+function createArray<T>(length: number, value: T): Array<T> {
+	let result: T[] = [];
+	for (let i = 0; i < length; i++) {
+		result[i] = value;
+	}
+	return result;
+}
+```
+
+在调用时，可以指定它具体的类型，也可以让类型推论自动推算：
+
+```ts
+createArray(3, 'x'); // ['x', 'x', 'x']
+createArray<string>(3, 'x'); // ['x', 'x', 'x']
+```
+
+定义泛型的时候，可以一次定义多个类型参数：
+
+```ts
+function swap<T, U>(tuple: [T, U]): [U, T] {
+	return [tuple[1], tuple[0]];
+}
+
+swap([7, 'seven']); // ['seven', 7]
+```
+
+#### 泛型接口
+
+函数类型可以 [使用接口表示](#函数的表示)，同样可以使用带有泛型的接口表示：
+
+```ts
+interface CreateArrayFunc<T> {
+	(length: number, value: T): Array<T>;
+}
+
+let createArray: CreateArrayFunc<any>;
+createArray = function<T>(length: number, value: T): Array<T> {
+	let result: T[] = [];
+	for (let i = 0; i < length; i++) {
+		result[i] = value;
+	}
+	return result;
+}
+
+createArray(3, 'x'); // ['x', 'x', 'x']
+```
+
+**注意** 此时在使用泛型接口的时候，需要定义泛型的类型。
+
+#### 泛型类
+
+与泛型接口类似，泛型也可以用于类的类型定义中：
+
+```ts
+class GenericNumber<T> {
+	zeroValue: T;
+	add: (x: T, y: T) => T;
+}
+
+let myGenericNumber = new GenericNumber<number>();
+myGenericNumber.zeroValue = 0;
+myGenericNumber.add = function(x, y) { return x + y; };
+```
+
+### 泛型约束
+
+在函数内部使用泛型变量时，由于事先不知道它的具体类型，所以不能随意的操作它的属性或方法。  
+我们可以对泛型进行约束，例如，只允许这个函数传入那些包含 `length` 属性的变量：
+
+```ts
+interface Lengthwise {
+	length: number;
+}
+
+function loggingIdentity<T extends Lengthwise>(arg: T): T {
+	console.log(arg.length);
+	return arg;
+}
+```
+
+在特定需求下，多个类型参数之间也可以互相约束：
+
+```ts
+function copyFields<T extends U, U>(target: T, source: U): T {
+	for (let id in source) {
+		target[id] = (<T>source)[id];
+	}
+	return target;
+}
+
+copyFields({ a: 1, b: 2, c: 3, d: 4 }, { b: 10, d: 20 });
+```
+
+### 默认类型
+
+TypeScript 2.3 以后，我们可以为泛型中的类型参数指定默认类型。  
+当使用泛型时没有在代码中直接指定类型参数，从实际值参数中也无法推测出时，这个默认类型就会起作用：
+
+```ts
+function createArray<T = string>(length: number, value: T): Array<T> {
+	let result: T[] = [];
+	for (let i = 0; i < length; i++) {
+		result[i] = value;
+	}
+	return result;
+}
+```
+
+<br />
+
+## 声明合并
+
+<hr />
+
+如果定义了两个相同名字的函数、接口或类，那么它们会合自动合并。
+
+### 合并的应用
+
+#### 函数的合并
+
+函数的合并，即 [函数重载](#函数重载)。
+
+#### 类与接口的合并
+
+对于拥有不同的属性和方法的同名类或接口，将会直接合并到一个类或接口中：
+
+```ts
+interface Alarm {
+	price: number;
+	alert(s: string): string;
+}
+interface Alarm {
+	weight: number;
+	alert(s: string, n: number): string;
+}
+```
+
+将合并为：
+
+```ts
+interface Alarm {
+	price: number;
+	weight: number;
+	alert(s: string): string;
+	alert(s: string, n: number): string;
+}
+```
+
+同名且相同类型的属性将视为同一属性；同名而类型不一致时，将会报错：
+
+> ```ts
+> interface Alarm {
+> 	price: number;
+> }
+> interface Alarm {
+> 	/* F */ price: string;
+> 	weight: number;
+> }
+
+<br />
+
+## 内置对象
+
+<hr />
+
+内置对象是指根据标准在全局作用域（Global）上存在的对象。这里的标准是指 ECMAScript 和其他环境（比如 DOM）的标准。
+
+### ECMAScript 内置对象
+
+由 ECMAScript 标准提供的内置对象。分为：  
+- 全局对象：全局对象的值属性（`NaN`、`Infinity`）、全局对象的函数属性（`eval(x)`、`parseInt(string, radix)`）、处理 URI 的函数属性（` encodeURI (uri)`、` decodeURI (encodedURI)`）等。  
+- Object 对象、Function 对象、Array 对象、String 对象、Boolean 对象、 Number 对象、Math 对象、Date 对象、RegExp 对象、Error对象、JSON 对象。
+
+在 TypeScript 中的使用：
+
+```ts
+let b: Boolean = new Boolean(1);
+let e: Error = new Error('Error occurred');
+let d: Date = new Date();
+let r: RegExp = /[a-z]/;
+```
+
+### DOM 内置对象
+
+由对象文档模型（Document Object Model）提供的内置对象。分为：
+
+- DOM 接口（`document`、`Event`、`Node`）;  
+- HTML 接口（`HTMLElement`）；  
+- SVG 接口（`SVGElement`）。
+
+在 TypeScript 中的使用：
+
+```ts
+let body: HTMLElement = document.body;
+let allDiv: NodeList = document.querySelectorAll('div');
+document.addEventListener('click', function(e: MouseEvent) {
+	// Do something
+});
+```
+
+### TypeScript 核心库的定义文件
+
+TypeScript 核心库的定义文件中定义了所有浏览器环境需要用到的类型，并且是预置在 TypeScript 中的。
+
+**注意** TypeScript 核心库的定义中不包含 Node.js 部分。  
+如果想用 TypeScript 写 Node.js，则需要引入第三方声明文件：
+
+```shell
+npm install @types/node --save-dev
+```
+
+<br />
+
+## 声明文件
+
+<hr />
+
+当使用第三方库时，我们需要引用它的声明文件，才能获得对应的代码补全、接口提示等功能。  
+三方库的使用场景主要有以下几种：
+- 全局变量：通过 `<script>` 标签引入后，注入全局变量
+- 直接扩展全局变量：通过 `<script>` 标签引入后，改变一个全局变量的结构
+- npm 包：通过 `import` 导入，符合 ES6 模块规范
+- UMD 库：既可以通过 `<script>` 标签引入，又可以通过 `import` 导入
+- npm 包 | UMD 库扩展全局变量：引用 npm 包或 UMD 库后，改变一个全局变量的结构
+- 模块插件：通过 `<script>` 或 `import` 导入后，改变另一个模块的结构
+
+当我们在 HTML 中通过 `<script>` 标签引入 jQuery，后就可以使用全局变量 `$` 或 `jQuery` 了。而 TypeScript 的编译过程中不接触 HTML 文件，会认为这种方式非法。  
+这时，我们需要使用 **声明语句** `declare var` 来定义它的类型：
+
+```ts
+declare var jQuery: (selector: string) => any;
+
+// 正常使用
+jQuery('#foo');
+```
+
+通常我们会把声明语句放到一个单独的 **声明文件**（如 jQuery.d.ts）中：
+
+```ts
+// src/jQuery.d.ts
+
+declare var jQuery: (selector: string) => any;
+```
+
+**注意 声明文件名命必须以 .d.ts 结尾**。
+
+```
++ src
+| + index.ts
+| + jQuery.d.ts
++ tsconfig.json
+```
+
+### 全局变量
+
+全局变量即第一个示例中展示的引用方式，有以下几种声明方式。
+
+#### 声明类型
+
+由于 `any` 类型不进行类型检查，`declare var` 与 `declare let` 效用相同；  
+同时，全局变量通常没有修改需求，使用 `declare const` 效用相同。
+
+当全局变量是一个函数、类或枚举时，可以使用 `declare function`、`declare class`、`declare enum` 进行定义。  
+jQuery 实际上是一个函数，因此可以使用 `declare function` 来定义。在函数类型的声明语句中，同样支持函数重载：
+
+```ts
+// src/jQuery.d.ts
+
+declare function jQuery(selector: string): any;
+declare function jQuery(domReadyCallback: () => any): any;
+```
+
+```ts
+// src/index.ts
+
+jQuery('#foo');
+jQuery(function() { alert('Dom Ready!'); });
+```
+
+引用类时，类似于接口，不能定义具体的实现：
+
+```ts
+// src/Animal.d.ts
+
+declare class Animal {
+	name: string;
+	constructor(name: string);
+	sayHi(): string;
+}
+```
+
+#### 声明命名空间
+
+`namespace` 是 TypeScript 早期时为了解决模块化而使用的关键字。  
+由于历史遗留原因，ES6 出现前，TypeScript 提供了一种使用 `module` 关键字表示内部模块的方案。但由于 ES6 也使用了 `module` 关键字，TypeScript 为了兼容 ES6，使用 `namespace` 作为替代。
+
+`namespace` 被淘汰了，但是在声明文件中，`declare namespace` 还是比较常用的，它用来表示全局变量是一个对象，包含很多子属性。  
+比如 `jQuery` 是一个全局变量，它是一个对象，提供了 `jQuery.ajax` 等方法与属性，那么我们就可以使用 `declare namespace` 来声明这个拥有多个子属性的全局变量：
+
+```ts
+// src/jQuery.d.ts
+
+declare namespace jQuery {
+	function ajax(url: string, settings?: any): void;
+	const version: number;
+	class Event {
+		blur(eventType: EventType): void
+	}
+}
+```
+
+如果对象拥有深层的层级，则需要用嵌套的 `namespace` 来声明深层的属性的类型：
+
+```ts
+// src/jQuery.d.ts
+
+declare namespace jQuery {
+	function ajax(url: string, settings?: any): void;
+	namespace fn {
+		function extend(object: any): void;
+	}
+}
+```
+
+```ts
+// src/index.ts
+
+jQuery.ajax('/api/get_something');
+jQuery.fn.extend({
+	check: function() {
+		return this.each(function() {
+			this.checked = true;
+		});
+	}
+});
+```
+
+假如 jQuery 下仅有 fn 这一个属性,则可以不需要嵌套 `namespace`：
+
+```ts
+// src/jQuery.d.ts
+
+declare namespace jQuery.fn {
+	function extend(object: any): void;
+}
+```
+
+#### interface 与 type
+
+除了全局变量之外，可能有一些类型我们也希望能暴露出来。在类型声明文件中，我们可以直接使用 `interface` 或 `type` 来声明一个全局的接口或类型，这样的话，在其他文件中也可以使用这个接口或类型了：
+
+```ts
+// src/jQuery.d.ts
+
+interface AjaxSettings {
+	method?: 'GET' | 'POST'
+	data?: any;
+}
+declare namespace jQuery {
+	function ajax(url: string, settings?: AjaxSettings): void;
+}
+```
+
+```ts
+// src/index.ts
+
+let settings: AjaxSettings = {
+	method: 'POST',
+	data: {
+		name: 'foo'
+	}
+};
+jQuery.ajax('/api/post_something', settings);
+```
+
+#### 命名冲突
+
+暴露在最外层的 `interface` 或 `type` 会作为全局类型作用于整个项目中，我们应该尽可能的减少全局变量或全局类型的数量。故最好将他们放到 `namespace` 下：
+
+```ts
+// src/jQuery.d.ts
+
+declare namespace jQuery {
+	interface AjaxSettings {
+		method?: 'GET' | 'POST'
+		data?: any;
+	}
+	function ajax(url: string, settings?: AjaxSettings): void;
+}
+```
+
+```ts
+// src/index.ts
+
+let settings: jQuery.AjaxSettings = {
+	method: 'POST',
+	data: {
+		name: 'foo'
+	}
+};
+jQuery.ajax('/api/post_something', settings);
+```
+
+### 直接扩展全局变量
+
+有的第三方库扩展了一个全局变量，可是此全局变量的类型却没有相应的更新过来，就会导致 ts 编译错误，此时就需要扩展全局变量的类型。
+
+比如扩展 `String` 类型，通过声明合并，使用 `interface String` 即可给 `String` 添加属性或方法：
+
+```ts
+interface String {
+	prependHello(): string;
+}
+
+'foo'.prependHello();
+```
+
+> 也可以使用 `declare namespace` 给已有的命名空间添加类型声明：
+> ```ts
+> // types/jquery-plugin/index.d.ts
+> 
+> declare namespace JQuery {
+> 	interface CustomOptions {
+> 		bar: string;
+> 	}
+> }
+> 
+> interface JQueryStatic {
+> 	foo(options: JQuery.CustomOptions): string;
+> }
+> ```
+> 
+> ```ts
+> // src/index.ts
+> 
+> jQuery.foo({
+> 	bar: ''
+> });
+> ```
+> 没看懂……
+
+### npm 包
+
+### UMD 库
+
+### npm 包 | UMD 库中扩展全局变量
+
+### 模块插件
+
+### 声明文件依赖
+
+### 自动声明文件
