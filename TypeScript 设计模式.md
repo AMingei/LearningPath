@@ -20,8 +20,8 @@
 > 
 > [3.行为型模式](#行为型模式) 类和对象如何交互，及划分责任和算法。
 > 
-> > 策略模式：定义一系列算法，把他们封装起来，并且使它们可以相互替换。  
-模板模式：定义一个算法结构，而将一些步骤延迟到子类实现。  
+> > [3.1.模板模式](#模板模式)：定义一个抽象类，其中的抽象方法由子类实现。  
+[3.2.策略模式](#策略模式)：封装一系列可以相互替换的算法，由上下文统一管理。  
 [3.3.命令模式](#命令模式)：将命令请求封装为一个对象，使得可以用不同的请求来进行参数化。  
 迭代器模式：一种遍历访问聚合对象中各个元素的方法，不暴露该对象的内部结构。  
 观察者模式：对象间的一对多的依赖关系。  
@@ -36,7 +36,8 @@
 
 > [【TypeScript】常见的设计模式_typescript设计模式_Sco_Jing1031的博客-CSDN博客](https://blog.csdn.net/m0_47109503/article/details/125868896)  
 [设计模式 | 菜鸟教程](https://www.runoob.com/design-pattern/design-pattern-tutorial.html)  
-[工厂方法 - 维基百科，自由的百科全书](https://zh.wikipedia.org/wiki/%E5%B7%A5%E5%8E%82%E6%96%B9%E6%B3%95)
+[工厂方法 - 维基百科，自由的百科全书](https://zh.wikipedia.org/wiki/%E5%B7%A5%E5%8E%82%E6%96%B9%E6%B3%95)  
+[设计模式系列----策略模式的理解，以及为什么要有上下文_三七有脾气的博客-CSDN博客](https://blog.csdn.net/yuanchangliang/article/details/117467843)
 
 <br />
 
@@ -218,6 +219,211 @@ let actorManager = ActorManager.Instance();
 <hr />
 
 行为型模式特别关注对象之间的通信。
+
+### 模板模式
+
+**模板模式**（Template Pattern），指一个抽象类公开定义了执行它的方法的方式 / 模板。它的子类可以按需要重写方法的实现，但调用将以抽象类中定义的方式进行。  
+优点：一、封装不变部分，扩展可变部分。二、提取公共代码，便于维护。三、行为由父类控制，由子类实现。  
+缺点：每一个不同的实现都需要一个子类来实现，导致类的个数增加，使得系统更加庞大。
+
+例如，我们可以对角色的攻击动作指定模板，将一次攻击分割为攻击前摇、攻击、攻击后摇三部分：
+
+```ts
+abstract class Actor {
+	abstract beforeAttack(condition?: any): any;
+	abstract attacking(condition?: any): any;
+	abstract afterAttacked(condition?: any): any;
+	// 模板函数
+	attack(condition?: any) {
+		this.afterAttacked(this.attacking(this.beforeAttack(condition)));
+	}
+}
+```
+
+对于不同的子类，我们可以在攻击模板的基础上进行修改。  
+例如，`Warrior` 的实现：
+
+```ts
+class Warrior extends Actor {
+	beforeAttack() {
+		console.log('take up the sword.');
+	}
+	attacking() {
+		// 有 50% 的概率击中敌人
+		if(Math.random() >= 0.5) {
+			console.log('Enemy Slain!');
+			return true;
+		} else {
+			console.log('attack missed.');
+			return false;
+		}
+	}
+	afterAttacked(isSlain?: boolean) {
+		if(isSlain) {
+			console.log('put up the sword.');
+		}
+	}
+}
+
+let warrior = new Warrior();
+warrior.attack();
+// take up the sword.
+// attack missed.
+warrior.attack();
+// take up the sword.
+// Enemy Slain!
+// put up the sword.
+```
+
+`Mage` 的实现：
+
+```ts
+// 定义法术实体
+class MagicEntity {
+	// 执行法术，且法术必定命中
+	execute() { console.log('Bingo!'); }
+}
+class FireBall extends MagicEntity {}
+class SheepGenerator extends MagicEntity {}
+
+class Mage extends Actor {
+	beforeAttack(spell?: string) {
+		// Mage 在发起攻击前咏唱咒语
+		console.log(`reciting the spell... ${spell}!`);
+		// 按照咒语类型召唤不同的法术实体
+		switch(spell as string) {
+			// 火球术
+			case 'Fire Ball':
+				return new FireBall();
+			// 变羊术
+			case 'Polymorph':
+				return new SheepGenerator();
+			default:
+				console.log('invalid spell.');
+				break;
+		}
+	}
+	attacking(magicEntity?: MagicEntity) {
+		// 如果生成了对应法术实体，则发起攻击
+		if(magicEntity) {
+			magicEntity.execute();
+		} else {
+			console.log('nothing happend.');
+		}
+	}
+	// Mage 没有施法后摇
+	afterAttacked() {}
+}
+
+let mage = new Mage();
+mage.attack('Fire Ball');
+// reciting the spell... Fire Ball!
+// Bingo!
+mage.attack('Ah Ba Ah Ba');
+// reciting the spell... Ah Ba Ah Ba!
+// invalid spell.
+// nothing happend.
+```
+
+以上两个子类，`attack` 的具体实现差异很大，但他们都有着相同的攻击流程。提取出相同的部分，有利于降低维护成本。  
+例如，现在出现了新的需求，为角色添加一个攻击吸血 / 反伤 buff，这个机制的触发正处于 `attacking` 与 `afterAttacked` 之间，只需要调整 `Actor.attck` 即可。如果没有提取模板，我们则需要在每个子类的 `attck` 上做修改，成本大大提高。  
+
+### 策略模式
+
+**策略模式**（Strategy pattern），指对象有某个行为，但是在不同的场景中，该行为有不同的实现算法。  
+封装后的算法称为策略 Stragegy，策略的管理者称为上下文 Context，调用者通过创建上下文环境，实现在上下文中调用不同的策略。  
+优点：一、算法可以自由切换；二、避免使用多重条件判断。三、扩展性良好。  
+缺点：一、调用者需要知晓各种策略类；二、所有策略类都需要对外暴露。
+
+例如，当我们的角色没有接收到任何命令时，将在原地待命。此时，我们可以为静止的角色设定不同的待命算法：**警戒**（主动追击进入警戒范围内的敌人）、**驻守**（主动攻击进入攻击范围内的敌人）、**休整**（仅当受到攻击后对敌人发起反击）。  
+这三种待命算法可以被封装为不同的待命策略：
+
+```ts
+// 三种不同的待命状态
+// positive 警戒 neutral 驻守 negative 休整
+type idlingState = 'positive' | 'neutral' | 'negative';
+
+// Actor 默认为驻守状态
+class Actor {
+	abnormalState: string | null = null;
+	constructor(public idlingState: idlingState = 'neutral') {}
+}
+
+interface IStragegy {
+	execute(actor: Actor): void;
+}
+abstract class Stragegy implements IStragegy {
+	abstract execute(actor: Actor): void;
+}
+// 三种不同策略的实现
+class PositiveStragegy extends Stragegy {
+	execute(actor: Actor): void {
+		actor.idlingState = 'positive';
+	}
+}
+class NeutralStragegy extends Stragegy {
+	execute(actor: Actor): void {
+		actor.idlingState = 'neutral';
+	}
+}
+class NegativeStragegy extends Stragegy {
+	execute(actor: Actor): void {
+		actor.idlingState = 'negative';
+	}
+}
+
+// 策略的切换由上下文统一管理，Context 默认采用驻守策略
+class IdlingContext {
+	constructor(public stragegy: Stragegy = new NeutralStragegy()) {}
+	execute(actor: Actor) {
+		this.stragegy.execute(actor);
+	}
+}
+
+let actor = new Actor(); // Actor { idlingState: 'neutral' }
+let context = new IdlingContext(new PositiveStragegy());
+context.execute(actor);  // Actor { idlingState: 'positive' }
+context = new IdlingContext(new NegativeStragegy());
+context.execute(actor);  // Actor { idlingState: 'negative' }
+```
+
+看完以上代码，新的问题出现了，仅实现策略类就能够满足 `Actor` 状态切换的需求，为什么还需还通过 `Context` 类再次封装呢？
+
+```ts
+let actor = new Actor(); // Actor { idlingState: 'neutral' }
+let stragegy = new PositiveStragegy();
+stragegy.execute(actor); // Actor { idlingState: 'positive' }
+stragegy = new NegativeStragegy();
+stragegy.execute(actor); // Actor { idlingState: 'negative' }
+```
+
+实际开发中，我们的策略执行并不是一个孤立的行为。  
+注意到我们上文 `Actor` 类下有一个没有用到的属性 `abnormalState`，假如我们的角色处于某种异常状态（不是指程序执行时的异常，如狂热 Buff 下），保持亢奋（警戒），无法切换状态：
+
+```ts
+if(actor.abnormalState === 'fanatical') {
+	console.log('the actor is fanatical, you cann\'t change it\' idlingState');
+} else {
+	stragegy.execute(actor);
+}
+```
+
+显然，部分逻辑判断无论是写在每次调用状态切换时，还是每个策略类的 `execute` 函数内部，都会让整个程序的失去优雅性。因此我们需要一个上下文类管理策略的执行：
+
+```ts
+class IdlingContext {
+	constructor(public stragegy: Stragegy = new NeutralStragegy()) {}
+	execute(actor: Actor) {
+		if(actor.abnormalState === 'fanatical') {
+			console.log('the actor is fanatical, you cann\'t change it\'s idlingState');
+		} else {
+			this.stragegy.execute(actor);
+		}
+	}
+}
+```
+
+
 
 ### 命令模式
 
